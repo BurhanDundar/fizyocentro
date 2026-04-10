@@ -128,3 +128,30 @@
     @apply font-sans;
   }
 }
+
+/* FullCalendar Styles */
+.calendar-container {
+  min-height: 600px;
+}
+
+.fc {
+  font-family: inherit;
+}
+
+.fc-button {
+  text-transform: capitalize !important;
+}
+
+.fc-event {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.fc-event:hover {
+  opacity: 0.9;
+}
+
+.fc-timegrid-slot {
+  height: 3em;
+}
