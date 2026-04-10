@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Calendar } from '@/components/calendar/Calendar';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAllEmployees } from '@/services/admin.service';
+import { getAllUsers } from '@/services/admin.service';
 import { User } from '@/types';
 
 export default function DashboardPage() {
@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
   const loadEmployees = async () => {
     try {
-      const employeesList = await getAllEmployees();
+      const employeesList = await getAllUsers();
       setEmployees(employeesList);
     } catch (error) {
       console.error('Error loading employees:', error);

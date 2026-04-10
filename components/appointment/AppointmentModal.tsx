@@ -106,12 +106,7 @@ export function AppointmentModal({
   };
 
   const handleClose = () => {
-    setFormData({
-      patientName: '',
-      description: '',
-      startTime: new Date(),
-      endTime: new Date(),
-    });
+    // Don't reset form data here - let useEffect handle it on next open
     setErrors({});
     onClose();
   };

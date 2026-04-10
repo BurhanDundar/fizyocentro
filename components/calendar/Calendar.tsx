@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction';
-import { EventClickArg, EventInput } from '@fullcalendar/core';
+import { EventClickArg, EventInput, EventDropArg } from '@fullcalendar/core';
 import { Appointment, AppointmentFormData } from '@/types';
 import { AppointmentModal } from '@/components/appointment/AppointmentModal';
 import {
@@ -88,6 +88,36 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     }
   };
 
+  // Handle event drop (drag and drop)
+  const handleEventDrop = async (arg: EventDropArg) => {
+    const appointment = appointments.find((a) => a.id === arg.event.id);
+    if (!appointment) {
+      arg.revert();
+      return;
+    }
+
+    try {
+      const newStartTime = arg.event.start;
+      const newEndTime = arg.event.end;
+
+      if (!newStartTime || !newEndTime) {
+        arg.revert();
+        return;
+      }
+
+      // Update appointment with new times
+      await updateAppointment(appointment.id, {
+        patientName: appointment.patientName,
+        description: appointment.description,
+        startTime: newStartTime,
+        endTime: newEndTime,
+      });
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      arg.revert();
+    }
+  };
+
   // Handle create appointment
   const handleCreateAppointment = async (data: AppointmentFormData) => {
     if (!user) return;
@@ -132,7 +162,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
           slotMaxTime="20:00:00"
           slotDuration="00:30:00"
           allDaySlot={false}
-          editable={false}
+          editable={true}
           selectable={true}
           selectMirror={true}
           dayMaxEvents={true}
@@ -140,6 +170,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
           events={events}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
           height="auto"
           locale="tr"
           buttonText={{
