@@ -226,6 +226,11 @@ export function Calendar({ selectedUserId }: CalendarProps) {
           height="auto"
           locale="tr"
           firstDay={1}
+          eventTimeFormat={{
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }}
           buttonText={{
             today: 'Bugün',
             month: 'Ay',
