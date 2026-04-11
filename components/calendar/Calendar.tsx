@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction';
-import { EventClickArg, EventInput } from '@fullcalendar/core';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin, { DateClickArg, EventResizeDoneArg } from '@fullcalendar/interaction';
+import { EventClickArg, EventInput, EventDropArg } from '@fullcalendar/core';
 import { Appointment, AppointmentFormData } from '@/types';
 import { AppointmentModal } from '@/components/appointment/AppointmentModal';
 import {
@@ -12,12 +13,11 @@ import {
   updateAppointment,
   deleteAppointment,
   subscribeToUserAppointments,
-  subscribeToAllAppointments,
 } from '@/services/appointment.service';
 import { useAuth } from '@/hooks/useAuth';
 
 interface CalendarProps {
-  selectedUserId?: string;
+  selectedUserId: string;
 }
 
 export function Calendar({ selectedUserId }: CalendarProps) {
@@ -35,19 +35,12 @@ export function Calendar({ selectedUserId }: CalendarProps) {
   // Subscribe to appointments based on role and selected user
   useEffect(() => {
     if (!user) return;
+    if (!selectedUserId) return; // Wait for selectedUserId to be set
 
     let unsubscribe: (() => void) | undefined;
 
-    if (user.role === 'admin' && selectedUserId) {
-      // Admin viewing specific user
-      unsubscribe = subscribeToUserAppointments(selectedUserId, setAppointments);
-    } else if (user.role === 'admin') {
-      // Admin viewing all appointments
-      unsubscribe = subscribeToAllAppointments(setAppointments);
-    } else {
-      // Employee viewing own appointments
-      unsubscribe = subscribeToUserAppointments(user.id, setAppointments);
-    }
+    // Always view specific user's appointments (selectedUserId is always set now)
+    unsubscribe = subscribeToUserAppointments(selectedUserId, setAppointments);
 
     return () => {
       if (unsubscribe) unsubscribe();
@@ -88,11 +81,76 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     }
   };
 
+  // Handle event drop (drag and drop)
+  const handleEventDrop = async (arg: EventDropArg) => {
+    const appointment = appointments.find((a) => a.id === arg.event.id);
+    if (!appointment) {
+      arg.revert();
+      return;
+    }
+
+    try {
+      const newStartTime = arg.event.start;
+      const newEndTime = arg.event.end;
+
+      if (!newStartTime || !newEndTime) {
+        arg.revert();
+        return;
+      }
+
+      // Calculate duration from original appointment
+      const originalDuration = appointment.endTime.toDate().getTime() - appointment.startTime.toDate().getTime();
+      const calculatedEndTime = new Date(newStartTime.getTime() + originalDuration);
+
+      // Update appointment with new times
+      await updateAppointment(appointment.id, {
+        patientName: appointment.patientName,
+        description: appointment.description,
+        startTime: newStartTime,
+        endTime: calculatedEndTime,
+      });
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      arg.revert();
+    }
+  };
+
+  // Handle event resize (büyütme/küçültme)
+  const handleEventResize = async (arg: EventResizeDoneArg) => {
+    const appointment = appointments.find((a) => a.id === arg.event.id);
+    if (!appointment) {
+      arg.revert();
+      return;
+    }
+
+    try {
+      const newStartTime = arg.event.start;
+      const newEndTime = arg.event.end;
+
+      if (!newStartTime || !newEndTime) {
+        arg.revert();
+        return;
+      }
+
+      // Update appointment with new times
+      await updateAppointment(appointment.id, {
+        patientName: appointment.patientName,
+        description: appointment.description,
+        startTime: newStartTime,
+        endTime: newEndTime,
+      });
+    } catch (error) {
+      console.error('Error resizing appointment:', error);
+      arg.revert();
+    }
+  };
+
   // Handle create appointment
   const handleCreateAppointment = async (data: AppointmentFormData) => {
     if (!user) return;
 
-    const userId = user.role === 'admin' && selectedUserId ? selectedUserId : user.id;
+    // Use selectedUserId if available, otherwise use current user's id
+    const userId = selectedUserId || user.id;
     await createAppointment(userId, data);
   };
 
@@ -121,29 +179,61 @@ export function Calendar({ selectedUserId }: CalendarProps) {
       <div className="calendar-container bg-white rounded-lg shadow p-4">
         <FullCalendar
           ref={calendarRef}
-          plugins={[timeGridPlugin, interactionPlugin]}
+          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
           headerToolbar={{
             left: 'prev,next today',
             center: 'title',
-            right: 'timeGridWeek,timeGridDay',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay',
+          }}
+          customButtons={{
+            timeGridWeek: {
+              text: 'Hafta',
+              click: function() {
+                const calendarApi = calendarRef.current?.getApi();
+                if (calendarApi) {
+                  calendarApi.changeView('timeGridWeek');
+                  calendarApi.today();
+                }
+              }
+            },
+            timeGridDay: {
+              text: 'Gün',
+              click: function() {
+                const calendarApi = calendarRef.current?.getApi();
+                if (calendarApi) {
+                  calendarApi.changeView('timeGridDay');
+                  calendarApi.today();
+                }
+              }
+            }
           }}
           slotMinTime="08:00:00"
           slotMaxTime="20:00:00"
           slotDuration="00:30:00"
           allDaySlot={false}
-          editable={false}
+          editable={true}
           selectable={true}
           selectMirror={true}
           dayMaxEvents={true}
           weekends={true}
+          eventResizableFromStart={true}
           events={events}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
+          eventResize={handleEventResize}
           height="auto"
           locale="tr"
+          firstDay={1}
+          eventTimeFormat={{
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }}
           buttonText={{
             today: 'Bugün',
+            month: 'Ay',
             week: 'Hafta',
             day: 'Gün',
           }}

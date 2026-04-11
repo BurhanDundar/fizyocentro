@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Calendar } from '@/components/calendar/Calendar';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAllEmployees } from '@/services/admin.service';
+import { getAllUsers } from '@/services/admin.service';
 import { User } from '@/types';
 
 export default function DashboardPage() {
@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
 
   const [employees, setEmployees] = useState<User[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string | undefined>();
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -23,16 +23,20 @@ export default function DashboardPage() {
     }
   }, [user, loading, router]);
 
-  // Load employees if admin
+  // Load employees if admin and set default user
   useEffect(() => {
     if (user?.role === 'admin') {
       loadEmployees();
     }
-  }, [user]);
+    // Set logged-in user as default
+    if (user && selectedUserId === '') {
+      setSelectedUserId(user.id);
+    }
+  }, [user, selectedUserId]);
 
   const loadEmployees = async () => {
     try {
-      const employeesList = await getAllEmployees();
+      const employeesList = await getAllUsers();
       setEmployees(employeesList);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -81,20 +85,22 @@ export default function DashboardPage() {
                     Çalışan Seç:
                   </label>
                   <Select
-                    value={selectedUserId || 'all'}
+                    value={selectedUserId}
                     onValueChange={(value) => {
-                      if (value === 'all') {
-                        setSelectedUserId(undefined);
-                      } else if (value) {
+                      if (value) {
                         setSelectedUserId(value);
                       }
                     }}
                   >
                     <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Tüm Çalışanlar" />
+                      <SelectValue>
+                        {selectedUserId
+                          ? employees.find(e => e.id === selectedUserId)?.name || user.name
+                          : user.name
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tüm Çalışanlar</SelectItem>
                       {employees.map((employee) => (
                         <SelectItem key={employee.id} value={employee.id}>
                           {employee.name}

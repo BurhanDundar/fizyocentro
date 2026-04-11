@@ -155,3 +155,37 @@
 .fc-timegrid-slot {
   height: 3em;
 }
+
+/* Resize handles - tire işaretleri */
+.fc-event-resizer::before {
+  content: '-';
+  position: absolute;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+/* Sol üst tire */
+.fc-event-resizer-start::before {
+  top: 3px;
+  left: 3px;
+}
+
+/* Sağ alt tire */
+.fc-event-resizer-end::before {
+  bottom: 3px;
+  right: 3px;
+}
+
+/* Input error shake animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.input-error {
+  animation: shake 0.4s ease-in-out;
+  border-color: rgb(239 68 68) !important;
+}
