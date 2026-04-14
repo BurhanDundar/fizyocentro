@@ -66,6 +66,9 @@ export function AppointmentModal({
       type: 'none',
       count: 1,
     },
+    appointmentType: 'Ön Görüşme',
+    serviceType: 'Fizik Tedavi',
+    patients: [{ name: '', phone: '' }],
   });
 
   // Update form when appointment or initial times change
@@ -80,6 +83,9 @@ export function AppointmentModal({
           type: 'none',
           count: 1,
         },
+        appointmentType: appointment.appointmentType || 'Ön Görüşme',
+        serviceType: appointment.serviceType || 'Fizik Tedavi',
+        patients: appointment.patients || [{ name: '', phone: '' }],
       });
       setIsRecurring(false);
     } else if (initialStartTime && initialEndTime) {
@@ -92,6 +98,9 @@ export function AppointmentModal({
           type: 'none',
           count: 1,
         },
+        appointmentType: 'Ön Görüşme',
+        serviceType: 'Fizik Tedavi',
+        patients: [{ name: '', phone: '' }],
       });
       setIsRecurring(false);
     }
@@ -103,28 +112,49 @@ export function AppointmentModal({
     setErrorKey(prev => prev + 1); // Trigger animation on every submit
 
     try {
+      // Auto-populate patientName from first patient for backwards compatibility
+      const submissionData = {
+        ...formData,
+        patientName: formData.patients[0]?.name || '',
+      };
+
+      console.log('Form data before validation:', submissionData);
+
       // Validate form data
-      appointmentSchema.parse(formData);
+      appointmentSchema.parse(submissionData);
 
       setLoading(true);
-      await onSubmit(formData);
+      await onSubmit(submissionData);
       handleClose();
     } catch (error: any) {
+      console.error('Validation error:', error);
+
       if (error.issues && Array.isArray(error.issues)) {
         // Zod validation error - hem field bazlı hem de genel message
         const newErrors: Record<string, string> = {};
-        const errorMessages: string[] = [];
+        const errorMessagesSet = new Set<string>();
 
         error.issues.forEach((issue: any) => {
           const fieldPath = issue.path[0];
           if (fieldPath) {
             newErrors[fieldPath] = issue.message;
           }
-          errorMessages.push(issue.message);
+          // Custom mesajları veya en spesifik mesajı ekle
+          if (issue.code === 'custom' || issue.path.length === 1) {
+            errorMessagesSet.add(issue.message);
+          }
+          console.log('Validation issue:', issue.path.join('.'), issue.message);
         });
 
-        if (errorMessages.length > 0) {
-          newErrors.submit = errorMessages.join('\n');
+        // Eğer hiç custom mesaj yoksa, tüm mesajları ekle
+        if (errorMessagesSet.size === 0) {
+          error.issues.forEach((issue: any) => {
+            errorMessagesSet.add(issue.message);
+          });
+        }
+
+        if (errorMessagesSet.size > 0) {
+          newErrors.submit = Array.from(errorMessagesSet).join('\n');
         }
 
         setErrors(newErrors);
@@ -173,7 +203,7 @@ export function AppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         {/* Overlay when delete dialog is open */}
         {showDeleteDialog && (
           <div className="absolute inset-0 bg-gray-900/50 z-[55] rounded-xl" />
@@ -190,23 +220,105 @@ export function AppointmentModal({
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-3 sm:gap-4 py-3 sm:py-4">
-            {/* Patient Name */}
+            {/* Appointment Type */}
             <div className="grid gap-2">
-              <Label htmlFor="patientName">Hasta Adı</Label>
-              <Input
-                key={`patientName-${errorKey}`}
-                id="patientName"
-                value={formData.patientName}
-                onChange={(e) =>
-                  setFormData({ ...formData, patientName: e.target.value })
+              <Label htmlFor="appointmentType">Randevu Tipi</Label>
+              <Select
+                value={formData.appointmentType}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, appointmentType: value as 'Ön Görüşme' | 'Rutin Görüşme' | 'Muayene' })
                 }
-                placeholder="Hasta adı giriniz"
-                className={errors.patientName ? 'input-error' : ''}
-              />
-              {errors.patientName && (
-                <p className="text-sm text-red-500">{errors.patientName}</p>
-              )}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ön Görüşme">Ön Görüşme</SelectItem>
+                  <SelectItem value="Rutin Görüşme">Rutin Görüşme</SelectItem>
+                  <SelectItem value="Muayene">Muayene</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Service Type */}
+            <div className="grid gap-2">
+              <Label htmlFor="serviceType">Randevu Hizmeti</Label>
+              <Select
+                value={formData.serviceType}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, serviceType: value as 'Fizik Tedavi' })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Fizik Tedavi">Fizik Tedavi</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Number of Patients */}
+            <div className="grid gap-2">
+              <Label htmlFor="patientCount">Kişi Sayısı</Label>
+              <Select
+                value={formData.patients.length.toString()}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  const count = parseInt(value, 10);
+                  const newPatients = Array.from({ length: count }, (_, i) =>
+                    formData.patients[i] || { name: '', phone: '' }
+                  );
+                  setFormData({ ...formData, patients: newPatients });
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 Kişi</SelectItem>
+                  <SelectItem value="2">2 Kişi</SelectItem>
+                  <SelectItem value="3">3 Kişi</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Patient Information */}
+            {formData.patients.map((patient, index) => (
+              <div key={index} className="grid gap-2 border-t pt-3 mt-2">
+                <h4 className="text-sm font-medium">{index + 1}. Kişi Bilgileri</h4>
+
+                <div className="grid gap-2">
+                  <Label htmlFor={`patient-name-${index}`}>İsim Soyisim</Label>
+                  <Input
+                    key={`patient-name-${index}-${errorKey}`}
+                    id={`patient-name-${index}`}
+                    value={patient.name}
+                    onChange={(e) => {
+                      const newPatients = [...formData.patients];
+                      newPatients[index] = { ...newPatients[index], name: e.target.value };
+                      setFormData({ ...formData, patients: newPatients });
+                    }}
+                    placeholder="İsim Soyisim"
+                    className={errors.patients ? 'input-error' : ''}
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor={`patient-phone-${index}`}>Telefon Numarası (Opsiyonel)</Label>
+                  <Input
+                    id={`patient-phone-${index}`}
+                    value={patient.phone || ''}
+                    onChange={(e) => {
+                      const newPatients = [...formData.patients];
+                      newPatients[index] = { ...newPatients[index], phone: e.target.value };
+                      setFormData({ ...formData, patients: newPatients });
+                    }}
+                    placeholder="0555 123 45 67 (opsiyonel)"
+                  />
+                </div>
+              </div>
+            ))}
 
             {/* Start Time */}
             <div className="grid gap-2">
@@ -252,15 +364,15 @@ export function AppointmentModal({
 
             {/* Description */}
             <div className="grid gap-2">
-              <Label htmlFor="description">Açıklama</Label>
+              <Label htmlFor="description">Açıklama (Opsiyonel)</Label>
               <Textarea
                 key={`description-${errorKey}`}
                 id="description"
-                value={formData.description}
+                value={formData.description || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Randevu detaylarını giriniz"
+                placeholder="Randevu detaylarını giriniz (opsiyonel)"
                 rows={4}
                 className={errors.description ? 'input-error' : ''}
               />
@@ -322,7 +434,7 @@ export function AppointmentModal({
                           })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -380,9 +492,9 @@ export function AppointmentModal({
             )}
           </div>
 
-          {/* General error message - hidden for now */}
-          {/* {errors.submit && typeof errors.submit === 'string' && (
-            <div className="rounded-md bg-red-50 p-3">
+          {/* General error message */}
+          {errors.submit && typeof errors.submit === 'string' && (
+            <div className="rounded-md bg-red-50 p-3 border border-red-200">
               <div className="text-sm text-red-800 space-y-1">
                 {errors.submit.split('\n').filter(msg => msg.trim()).map((msg, index) => (
                   <div key={index} className="flex items-start gap-2">
@@ -392,7 +504,7 @@ export function AppointmentModal({
                 ))}
               </div>
             </div>
-          )} */}
+          )}
 
           <DialogFooter className="gap-2">
             {appointment && onDelete && (

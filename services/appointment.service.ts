@@ -89,6 +89,9 @@ export const createAppointment = async (
       startTime: Timestamp.fromDate(data.startTime),
       endTime: Timestamp.fromDate(data.endTime),
       createdAt: Timestamp.now(),
+      appointmentType: data.appointmentType,
+      serviceType: data.serviceType,
+      patients: data.patients,
     };
 
     const docRef = await addDoc(
@@ -145,6 +148,9 @@ const createRecurringAppointments = async (
         endTime: Timestamp.fromDate(newEndTime),
         createdAt: Timestamp.now(),
         recurringGroupId, // Add group ID to link recurring appointments
+        appointmentType: data.appointmentType,
+        serviceType: data.serviceType,
+        patients: data.patients,
       });
     }
 
@@ -176,6 +182,9 @@ export const updateAppointment = async (
       description: data.description,
       startTime: Timestamp.fromDate(data.startTime),
       endTime: Timestamp.fromDate(data.endTime),
+      appointmentType: data.appointmentType,
+      serviceType: data.serviceType,
+      patients: data.patients,
     });
   } catch (error) {
     console.error('Error updating appointment:', error);

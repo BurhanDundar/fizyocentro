@@ -74,6 +74,11 @@ export function Calendar({ selectedUserId }: CalendarProps) {
 
   // Handle date/time slot click (create new appointment)
   const handleDateClick = (arg: DateClickArg) => {
+    // Only allow creating appointments for own calendar
+    if (!user || selectedUserId !== user.id) {
+      return;
+    }
+
     const startTime = arg.date;
     const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour
 
@@ -84,6 +89,11 @@ export function Calendar({ selectedUserId }: CalendarProps) {
 
   // Handle event click (edit appointment)
   const handleEventClick = (arg: EventClickArg) => {
+    // Only allow editing appointments for own calendar
+    if (!user || selectedUserId !== user.id) {
+      return;
+    }
+
     const appointment = appointments.find((a) => a.id === arg.event.id);
     if (appointment) {
       setSelectedAppointment(appointment);
@@ -94,6 +104,12 @@ export function Calendar({ selectedUserId }: CalendarProps) {
 
   // Handle event drop (drag and drop)
   const handleEventDrop = async (arg: EventDropArg) => {
+    // Only allow moving appointments for own calendar
+    if (!user || selectedUserId !== user.id) {
+      arg.revert();
+      return;
+    }
+
     const appointment = appointments.find((a) => a.id === arg.event.id);
     if (!appointment) {
       arg.revert();
