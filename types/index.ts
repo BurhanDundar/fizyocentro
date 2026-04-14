@@ -22,12 +22,21 @@ export interface Appointment {
   createdAt: Timestamp;
 }
 
+// Recurring appointment options
+export type RecurringType = 'daily' | 'weekly' | 'monthly' | 'none';
+
+export interface RecurringOptions {
+  type: RecurringType;
+  count: number; // Number of occurrences
+}
+
 // Form types for creating/editing appointments
 export interface AppointmentFormData {
   patientName: string;
   description: string;
   startTime: Date;
   endTime: Date;
+  recurring?: RecurringOptions;
 }
 
 // Firebase user data

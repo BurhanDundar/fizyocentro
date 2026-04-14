@@ -69,13 +69,19 @@ export const getAllAppointments = async (): Promise<Appointment[]> => {
 };
 
 /**
- * Create a new appointment
+ * Create a new appointment (supports recurring appointments)
  */
 export const createAppointment = async (
   userId: string,
   data: AppointmentFormData
 ): Promise<string> => {
   try {
+    // Check if recurring
+    if (data.recurring && data.recurring.type !== 'none' && data.recurring.count > 1) {
+      return await createRecurringAppointments(userId, data);
+    }
+
+    // Single appointment
     const appointmentData = {
       userId,
       patientName: data.patientName,
@@ -92,6 +98,61 @@ export const createAppointment = async (
     return docRef.id;
   } catch (error) {
     console.error('Error creating appointment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create recurring appointments
+ */
+const createRecurringAppointments = async (
+  userId: string,
+  data: AppointmentFormData
+): Promise<string> => {
+  try {
+    const { recurring } = data;
+    if (!recurring || recurring.type === 'none') {
+      throw new Error('Invalid recurring configuration');
+    }
+
+    const appointments: any[] = [];
+    const duration = data.endTime.getTime() - data.startTime.getTime();
+
+    for (let i = 0; i < recurring.count; i++) {
+      let newStartTime: Date;
+
+      if (recurring.type === 'daily') {
+        newStartTime = new Date(data.startTime.getTime() + (i * 24 * 60 * 60 * 1000));
+      } else if (recurring.type === 'weekly') {
+        newStartTime = new Date(data.startTime.getTime() + (i * 7 * 24 * 60 * 60 * 1000));
+      } else if (recurring.type === 'monthly') {
+        newStartTime = new Date(data.startTime);
+        newStartTime.setMonth(newStartTime.getMonth() + i);
+      } else {
+        throw new Error('Invalid recurring type');
+      }
+
+      const newEndTime = new Date(newStartTime.getTime() + duration);
+
+      appointments.push({
+        userId,
+        patientName: data.patientName,
+        description: data.description,
+        startTime: Timestamp.fromDate(newStartTime),
+        endTime: Timestamp.fromDate(newEndTime),
+        createdAt: Timestamp.now(),
+      });
+    }
+
+    // Create all appointments
+    const promises = appointments.map(apt =>
+      addDoc(collection(db, APPOINTMENTS_COLLECTION), apt)
+    );
+
+    const results = await Promise.all(promises);
+    return results[0].id; // Return first appointment ID
+  } catch (error) {
+    console.error('Error creating recurring appointments:', error);
     throw error;
   }
 };

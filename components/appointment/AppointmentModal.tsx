@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Appointment, AppointmentFormData } from '@/types';
 import { appointmentSchema } from '@/lib/validations/appointment';
 import { format } from 'date-fns';
@@ -39,12 +41,17 @@ export function AppointmentModal({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [errorKey, setErrorKey] = useState(0);
+  const [isRecurring, setIsRecurring] = useState(false);
 
   const [formData, setFormData] = useState<AppointmentFormData>({
     patientName: '',
     description: '',
     startTime: initialStartTime || new Date(),
     endTime: initialEndTime || new Date(),
+    recurring: {
+      type: 'none',
+      count: 1,
+    },
   });
 
   // Update form when appointment or initial times change
@@ -55,14 +62,24 @@ export function AppointmentModal({
         description: appointment.description,
         startTime: appointment.startTime.toDate(),
         endTime: appointment.endTime.toDate(),
+        recurring: {
+          type: 'none',
+          count: 1,
+        },
       });
+      setIsRecurring(false);
     } else if (initialStartTime && initialEndTime) {
       setFormData({
         patientName: '',
         description: '',
         startTime: initialStartTime,
         endTime: initialEndTime,
+        recurring: {
+          type: 'none',
+          count: 1,
+        },
       });
+      setIsRecurring(false);
     }
   }, [appointment, initialStartTime, initialEndTime]);
 
@@ -220,6 +237,116 @@ export function AppointmentModal({
                 <p className="text-sm text-red-500">{errors.description}</p>
               )}
             </div>
+
+            {/* Recurring Appointment - only show when creating new */}
+            {!appointment && (
+              <div className="grid gap-3 border-t pt-3 mt-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="recurring"
+                    checked={isRecurring}
+                    onCheckedChange={(checked) => {
+                      setIsRecurring(checked === true);
+                      if (!checked) {
+                        setFormData({
+                          ...formData,
+                          recurring: {
+                            type: 'none',
+                            count: 1,
+                          },
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          recurring: {
+                            type: 'daily',
+                            count: 1,
+                          },
+                        });
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor="recurring"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Tekrarlı Randevu
+                  </Label>
+                </div>
+
+                {isRecurring && (
+                  <div className="grid gap-3 pl-6">
+                    {/* Recurring Type */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="recurringType">Tekrar Sıklığı</Label>
+                      <Select
+                        value={formData.recurring?.type || 'daily'}
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            recurring: {
+                              ...formData.recurring!,
+                              type: value as 'daily' | 'weekly' | 'monthly',
+                            },
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Her Gün</SelectItem>
+                          <SelectItem value="weekly">Her Hafta</SelectItem>
+                          <SelectItem value="monthly">Her Ay</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Recurring Count */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="recurringCount">
+                        {formData.recurring?.type === 'daily' && 'Kaç Gün?'}
+                        {formData.recurring?.type === 'weekly' && 'Kaç Hafta?'}
+                        {formData.recurring?.type === 'monthly' && 'Kaç Ay?'}
+                      </Label>
+                      <Input
+                        id="recurringCount"
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.recurring?.count === 0 ? '' : formData.recurring?.count || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, ''); // Sadece rakam
+                          if (value === '') {
+                            setFormData({
+                              ...formData,
+                              recurring: {
+                                ...formData.recurring!,
+                                count: 0,
+                              },
+                            });
+                          } else {
+                            const numValue = parseInt(value);
+                            if (numValue >= 1 && numValue <= 365) {
+                              setFormData({
+                                ...formData,
+                                recurring: {
+                                  ...formData.recurring!,
+                                  count: numValue,
+                                },
+                              });
+                            }
+                          }
+                        }}
+                        placeholder="1"
+                      />
+                      <p className="text-xs text-gray-500">
+                        {formData.recurring?.count || 1} randevu oluşturulacak
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* General error message - hidden for now */}
