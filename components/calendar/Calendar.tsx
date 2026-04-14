@@ -219,7 +219,8 @@ export function Calendar({ selectedUserId }: CalendarProps) {
         </div>
 
         <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
-          <FullCalendar
+          <div className="min-w-[800px]">
+            <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
@@ -281,6 +282,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
             day: 'Gün',
           }}
         />
+          </div>
         </div>
       </div>
 
