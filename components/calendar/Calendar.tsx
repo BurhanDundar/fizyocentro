@@ -15,6 +15,8 @@ import {
   subscribeToUserAppointments,
 } from '@/services/appointment.service';
 import { useAuth } from '@/hooks/useAuth';
+import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
 
 interface CalendarProps {
   selectedUserId: string;
@@ -31,6 +33,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     start: Date;
     end: Date;
   } | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
 
   // Subscribe to appointments based on role and selected user
   useEffect(() => {
@@ -174,9 +177,34 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     }
   };
 
+  // Handle date picker change
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setSelectedDate(newDate);
+
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      calendarApi.gotoDate(new Date(newDate));
+    }
+  };
+
   return (
     <>
       <div className="calendar-container bg-white rounded-lg shadow p-2 sm:p-4">
+        {/* Date Picker */}
+        <div className="mb-4 flex items-center gap-2">
+          <label htmlFor="datepicker" className="text-sm font-medium text-gray-700">
+            Tarihe Git:
+          </label>
+          <Input
+            id="datepicker"
+            type="date"
+            value={selectedDate}
+            onChange={handleDateChange}
+            className="w-auto"
+          />
+        </div>
+
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
