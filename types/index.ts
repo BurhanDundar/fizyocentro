@@ -20,6 +20,7 @@ export interface Appointment {
   startTime: Timestamp;
   endTime: Timestamp;
   createdAt: Timestamp;
+  recurringGroupId?: string; // ID to link recurring appointments together
 }
 
 // Recurring appointment options

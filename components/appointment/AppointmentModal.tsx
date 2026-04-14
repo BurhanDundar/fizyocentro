@@ -24,6 +24,7 @@ interface AppointmentModalProps {
   onClose: () => void;
   onSubmit: (data: AppointmentFormData) => Promise<void>;
   onDelete?: () => Promise<void>;
+  onDeleteRecurringGroup?: (recurringGroupId: string) => Promise<void>;
   appointment?: Appointment | null;
   initialStartTime?: Date;
   initialEndTime?: Date;
@@ -34,6 +35,7 @@ export function AppointmentModal({
   onClose,
   onSubmit,
   onDelete,
+  onDeleteRecurringGroup,
   appointment,
   initialStartTime,
   initialEndTime,
@@ -126,15 +128,42 @@ export function AppointmentModal({
   const handleDelete = async () => {
     if (!onDelete) return;
 
-    if (confirm('Bu randevuyu silmek istediğinizden emin misiniz?')) {
+    // Check if this is a recurring appointment
+    if (appointment?.recurringGroupId && onDeleteRecurringGroup) {
+      const deleteAll = confirm(
+        'Bu tekrarlı randevu serisinin bir parçasıdır.\n\n' +
+        'Tüm serisi silmek ister misiniz?\n\n' +
+        'EVET = Tüm seriyi sil\n' +
+        'HAYIR = Sadece bu randevuyu sil'
+      );
+
       try {
         setLoading(true);
-        await onDelete();
+        if (deleteAll) {
+          // Delete entire recurring group
+          await onDeleteRecurringGroup(appointment.recurringGroupId);
+        } else {
+          // Delete only this appointment
+          await onDelete();
+        }
         handleClose();
       } catch (error) {
         console.error('Delete error:', error);
       } finally {
         setLoading(false);
+      }
+    } else {
+      // Normal single appointment delete
+      if (confirm('Bu randevuyu silmek istediğinizden emin misiniz?')) {
+        try {
+          setLoading(true);
+          await onDelete();
+          handleClose();
+        } catch (error) {
+          console.error('Delete error:', error);
+        } finally {
+          setLoading(false);
+        }
       }
     }
   };

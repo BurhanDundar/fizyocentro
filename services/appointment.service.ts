@@ -115,6 +115,9 @@ const createRecurringAppointments = async (
       throw new Error('Invalid recurring configuration');
     }
 
+    // Generate unique group ID for this recurring series
+    const recurringGroupId = `recurring_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
     const appointments: any[] = [];
     const duration = data.endTime.getTime() - data.startTime.getTime();
 
@@ -141,6 +144,7 @@ const createRecurringAppointments = async (
         startTime: Timestamp.fromDate(newStartTime),
         endTime: Timestamp.fromDate(newEndTime),
         createdAt: Timestamp.now(),
+        recurringGroupId, // Add group ID to link recurring appointments
       });
     }
 
@@ -189,6 +193,54 @@ export const deleteAppointment = async (
     await deleteDoc(doc(db, APPOINTMENTS_COLLECTION, appointmentId));
   } catch (error) {
     console.error('Error deleting appointment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete all appointments in a recurring group
+ */
+export const deleteRecurringGroup = async (
+  recurringGroupId: string
+): Promise<void> => {
+  try {
+    const q = query(
+      collection(db, APPOINTMENTS_COLLECTION),
+      where('recurringGroupId', '==', recurringGroupId)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const deletePromises = querySnapshot.docs.map((doc) =>
+      deleteDoc(doc.ref)
+    );
+
+    await Promise.all(deletePromises);
+  } catch (error) {
+    console.error('Error deleting recurring group:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get appointment by ID
+ */
+export const getAppointmentById = async (
+  appointmentId: string
+): Promise<Appointment | null> => {
+  try {
+    const appointmentDoc = await getDocs(
+      query(collection(db, APPOINTMENTS_COLLECTION), where('__name__', '==', appointmentId))
+    );
+
+    if (appointmentDoc.empty) return null;
+
+    const data = appointmentDoc.docs[0].data();
+    return {
+      id: appointmentDoc.docs[0].id,
+      ...data,
+    } as Appointment;
+  } catch (error) {
+    console.error('Error getting appointment:', error);
     throw error;
   }
 };

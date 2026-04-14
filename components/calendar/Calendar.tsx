@@ -12,6 +12,7 @@ import {
   createAppointment,
   updateAppointment,
   deleteAppointment,
+  deleteRecurringGroup,
   subscribeToUserAppointments,
 } from '@/services/appointment.service';
 import { useAuth } from '@/hooks/useAuth';
@@ -169,6 +170,11 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     await deleteAppointment(selectedAppointment.id);
   };
 
+  // Handle delete recurring group
+  const handleDeleteRecurringGroup = async (recurringGroupId: string) => {
+    await deleteRecurringGroup(recurringGroupId);
+  };
+
   const handleModalSubmit = async (data: AppointmentFormData) => {
     if (selectedAppointment) {
       await handleUpdateAppointment(data);
@@ -273,6 +279,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
         onClose={() => setModalOpen(false)}
         onSubmit={handleModalSubmit}
         onDelete={selectedAppointment ? handleDeleteAppointment : undefined}
+        onDeleteRecurringGroup={handleDeleteRecurringGroup}
         appointment={selectedAppointment}
         initialStartTime={selectedSlot?.start}
         initialEndTime={selectedSlot?.end}
