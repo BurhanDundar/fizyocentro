@@ -218,7 +218,8 @@ export function Calendar({ selectedUserId }: CalendarProps) {
           />
         </div>
 
-        <FullCalendar
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+          <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
@@ -251,7 +252,8 @@ export function Calendar({ selectedUserId }: CalendarProps) {
           }}
           slotMinTime="08:00:00"
           slotMaxTime="20:00:00"
-          slotDuration="00:30:00"
+          slotDuration="00:15:00"
+          slotLabelInterval="00:15:00"
           allDaySlot={false}
           editable={true}
           selectable={true}
@@ -279,6 +281,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
             day: 'Gün',
           }}
         />
+        </div>
       </div>
 
       <AppointmentModal
