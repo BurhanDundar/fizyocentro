@@ -11,6 +11,16 @@ export interface User {
   role: UserRole;
 }
 
+// Appointment types
+export type AppointmentType = 'Ön Görüşme' | 'Rutin Görüşme' | 'Muayene';
+export type ServiceType = 'Fizik Tedavi';
+
+// Patient information
+export interface PatientInfo {
+  name: string;
+  phone?: string;
+}
+
 // Appointment type
 export interface Appointment {
   id: string;
@@ -20,14 +30,30 @@ export interface Appointment {
   startTime: Timestamp;
   endTime: Timestamp;
   createdAt: Timestamp;
+  recurringGroupId?: string; // ID to link recurring appointments together
+  appointmentType: AppointmentType;
+  serviceType: ServiceType;
+  patients: PatientInfo[];
+}
+
+// Recurring appointment options
+export type RecurringType = 'daily' | 'weekly' | 'monthly' | 'none';
+
+export interface RecurringOptions {
+  type: RecurringType;
+  count: number; // Number of occurrences
 }
 
 // Form types for creating/editing appointments
 export interface AppointmentFormData {
   patientName: string;
-  description: string;
+  description?: string;
   startTime: Date;
   endTime: Date;
+  recurring?: RecurringOptions;
+  appointmentType: AppointmentType;
+  serviceType: ServiceType;
+  patients: PatientInfo[];
 }
 
 // Firebase user data

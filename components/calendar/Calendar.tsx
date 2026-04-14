@@ -12,9 +12,12 @@ import {
   createAppointment,
   updateAppointment,
   deleteAppointment,
+  deleteRecurringGroup,
   subscribeToUserAppointments,
 } from '@/services/appointment.service';
 import { useAuth } from '@/hooks/useAuth';
+import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
 
 interface CalendarProps {
   selectedUserId: string;
@@ -31,6 +34,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     start: Date;
     end: Date;
   } | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
 
   // Subscribe to appointments based on role and selected user
   useEffect(() => {
@@ -48,21 +52,33 @@ export function Calendar({ selectedUserId }: CalendarProps) {
   }, [user, selectedUserId]);
 
   // Convert appointments to FullCalendar events
-  const events: EventInput[] = appointments.map((appointment) => ({
-    id: appointment.id,
-    title: appointment.patientName,
-    start: appointment.startTime.toDate(),
-    end: appointment.endTime.toDate(),
-    extendedProps: {
-      description: appointment.description,
-      userId: appointment.userId,
-    },
-    backgroundColor: getColorForUser(appointment.userId),
-    borderColor: getColorForUser(appointment.userId),
-  }));
+  const events: EventInput[] = appointments.map((appointment) => {
+    // Use recurringGroupId for color if available, otherwise use appointment id
+    const colorKey = appointment.recurringGroupId || appointment.id;
+    const color = getColorForAppointment(colorKey);
+
+    return {
+      id: appointment.id,
+      title: appointment.patientName,
+      start: appointment.startTime.toDate(),
+      end: appointment.endTime.toDate(),
+      extendedProps: {
+        description: appointment.description,
+        userId: appointment.userId,
+        recurringGroupId: appointment.recurringGroupId,
+      },
+      backgroundColor: color,
+      borderColor: color,
+    };
+  });
 
   // Handle date/time slot click (create new appointment)
   const handleDateClick = (arg: DateClickArg) => {
+    // Only allow creating appointments for own calendar
+    if (!user || selectedUserId !== user.id) {
+      return;
+    }
+
     const startTime = arg.date;
     const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour
 
@@ -73,6 +89,11 @@ export function Calendar({ selectedUserId }: CalendarProps) {
 
   // Handle event click (edit appointment)
   const handleEventClick = (arg: EventClickArg) => {
+    // Only allow editing appointments for own calendar
+    if (!user || selectedUserId !== user.id) {
+      return;
+    }
+
     const appointment = appointments.find((a) => a.id === arg.event.id);
     if (appointment) {
       setSelectedAppointment(appointment);
@@ -83,6 +104,12 @@ export function Calendar({ selectedUserId }: CalendarProps) {
 
   // Handle event drop (drag and drop)
   const handleEventDrop = async (arg: EventDropArg) => {
+    // Only allow moving appointments for own calendar
+    if (!user || selectedUserId !== user.id) {
+      arg.revert();
+      return;
+    }
+
     const appointment = appointments.find((a) => a.id === arg.event.id);
     if (!appointment) {
       arg.revert();
@@ -166,6 +193,11 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     await deleteAppointment(selectedAppointment.id);
   };
 
+  // Handle delete recurring group
+  const handleDeleteRecurringGroup = async (recurringGroupId: string) => {
+    await deleteRecurringGroup(recurringGroupId);
+  };
+
   const handleModalSubmit = async (data: AppointmentFormData) => {
     if (selectedAppointment) {
       await handleUpdateAppointment(data);
@@ -174,10 +206,37 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     }
   };
 
+  // Handle date picker change
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setSelectedDate(newDate);
+
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      calendarApi.gotoDate(new Date(newDate));
+    }
+  };
+
   return (
     <>
-      <div className="calendar-container bg-white rounded-lg shadow p-4">
-        <FullCalendar
+      <div className="calendar-container bg-white rounded-lg shadow p-2 sm:p-4">
+        {/* Date Picker */}
+        <div className="mb-4 flex items-center gap-2">
+          <label htmlFor="datepicker" className="text-sm font-medium text-gray-700">
+            Tarihe Git:
+          </label>
+          <Input
+            id="datepicker"
+            type="date"
+            value={selectedDate}
+            onChange={handleDateChange}
+            className="w-auto"
+          />
+        </div>
+
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+          <div className="min-w-[800px]">
+            <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
@@ -210,7 +269,8 @@ export function Calendar({ selectedUserId }: CalendarProps) {
           }}
           slotMinTime="08:00:00"
           slotMaxTime="20:00:00"
-          slotDuration="00:30:00"
+          slotDuration="00:15:00"
+          slotLabelInterval="00:15:00"
           allDaySlot={false}
           editable={true}
           selectable={true}
@@ -238,6 +298,8 @@ export function Calendar({ selectedUserId }: CalendarProps) {
             day: 'Gün',
           }}
         />
+          </div>
+        </div>
       </div>
 
       <AppointmentModal
@@ -245,6 +307,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
         onClose={() => setModalOpen(false)}
         onSubmit={handleModalSubmit}
         onDelete={selectedAppointment ? handleDeleteAppointment : undefined}
+        onDeleteRecurringGroup={handleDeleteRecurringGroup}
         appointment={selectedAppointment}
         initialStartTime={selectedSlot?.start}
         initialEndTime={selectedSlot?.end}
@@ -253,22 +316,65 @@ export function Calendar({ selectedUserId }: CalendarProps) {
   );
 }
 
-// Helper function to generate consistent colors for users
-function getColorForUser(userId: string): string {
-  const colors = [
-    '#3b82f6', // blue
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#8b5cf6', // violet
-    '#ec4899', // pink
-    '#06b6d4', // cyan
+// Helper function to generate readable, diverse colors for appointments
+// Same recurringGroupId = same color, different appointments = different colors
+function getColorForAppointment(key: string): string {
+  const readableColors = [
+    // Blues
+    '#60a5fa', // medium blue
+    '#3b82f6', // strong blue
+    '#2563eb', // deep blue
+
+    // Greens
+    '#4ade80', // medium green
+    '#22c55e', // strong green
+    '#16a34a', // deep green
+
+    // Purples
+    '#a78bfa', // medium purple
+    '#8b5cf6', // strong purple
+    '#7c3aed', // deep purple
+
+    // Pinks/Roses
+    '#f472b6', // medium pink
+    '#ec4899', // strong pink
+    '#db2777', // deep rose
+
+    // Oranges
+    '#fb923c', // medium orange
+    '#f97316', // strong orange
+    '#ea580c', // deep orange
+
+    // Teals/Cyans
+    '#2dd4bf', // medium teal
+    '#14b8a6', // strong teal
+    '#0d9488', // deep teal
+
+    // Indigos
+    '#818cf8', // medium indigo
+    '#6366f1', // strong indigo
+    '#4f46e5', // deep indigo
+
+    // Reds
+    '#f87171', // medium red
+    '#ef4444', // strong red
+    '#dc2626', // deep red
+
+    // Emeralds
+    '#34d399', // medium emerald
+    '#10b981', // strong emerald
+    '#059669', // deep emerald
+
+    // Ambers (darker, readable)
+    '#fbbf24', // medium amber
+    '#f59e0b', // strong amber
+    '#d97706', // deep amber
   ];
 
   let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  return colors[Math.abs(hash) % colors.length];
+  return readableColors[Math.abs(hash) % readableColors.length];
 }

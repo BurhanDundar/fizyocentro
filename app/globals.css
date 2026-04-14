@@ -153,7 +153,76 @@
 }
 
 .fc-timegrid-slot {
-  height: 3em;
+  height: 1.5em;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 640px) {
+  .calendar-container {
+    min-height: 400px;
+  }
+
+  /* Küçük butonlar */
+  .fc .fc-button {
+    padding: 0.3em 0.5em !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Toolbar'ı daha kompakt yap */
+  .fc .fc-toolbar {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .fc .fc-toolbar-chunk {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  /* Title daha küçük */
+  .fc .fc-toolbar-title {
+    font-size: 1rem !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Time column daha dar */
+  .fc .fc-timegrid-axis {
+    width: 40px !important;
+  }
+
+  .fc .fc-timegrid-slot-label {
+    font-size: 0.65rem !important;
+  }
+
+  /* Event text küçült */
+  .fc-event-title,
+  .fc-event-time {
+    font-size: 0.7rem !important;
+  }
+
+  /* Slot height küçült */
+  .fc-timegrid-slot {
+    height: 2em !important;
+  }
+
+  /* Day headers */
+  .fc .fc-col-header-cell-cushion {
+    padding: 4px 2px !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Month view için */
+  .fc .fc-daygrid-day-number {
+    font-size: 0.75rem !important;
+    padding: 2px !important;
+  }
+
+  .fc .fc-daygrid-event {
+    font-size: 0.7rem !important;
+    padding: 1px 2px !important;
+  }
 }
 
 /* Resize handles - tire işaretleri */
@@ -188,4 +257,19 @@
 .input-error {
   animation: shake 0.4s ease-in-out;
   border-color: rgb(239 68 68) !important;
+}
+
+/* Blur dialog when alert dialog is open */
+[data-slot="dialog-content"]:has(+ [data-slot="alert-dialog-portal"]) {
+  filter: blur(4px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Alternative: when alert dialog is open, blur the main dialog */
+body:has([data-slot="alert-dialog-overlay"]) [data-slot="dialog-content"] {
+  filter: blur(4px);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: filter 0.2s, opacity 0.2s;
 }

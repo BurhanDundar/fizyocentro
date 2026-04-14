@@ -69,13 +69,19 @@ export const getAllAppointments = async (): Promise<Appointment[]> => {
 };
 
 /**
- * Create a new appointment
+ * Create a new appointment (supports recurring appointments)
  */
 export const createAppointment = async (
   userId: string,
   data: AppointmentFormData
 ): Promise<string> => {
   try {
+    // Check if recurring
+    if (data.recurring && data.recurring.type !== 'none' && data.recurring.count > 1) {
+      return await createRecurringAppointments(userId, data);
+    }
+
+    // Single appointment
     const appointmentData = {
       userId,
       patientName: data.patientName,
@@ -83,6 +89,9 @@ export const createAppointment = async (
       startTime: Timestamp.fromDate(data.startTime),
       endTime: Timestamp.fromDate(data.endTime),
       createdAt: Timestamp.now(),
+      appointmentType: data.appointmentType,
+      serviceType: data.serviceType,
+      patients: data.patients,
     };
 
     const docRef = await addDoc(
@@ -92,6 +101,68 @@ export const createAppointment = async (
     return docRef.id;
   } catch (error) {
     console.error('Error creating appointment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create recurring appointments
+ */
+const createRecurringAppointments = async (
+  userId: string,
+  data: AppointmentFormData
+): Promise<string> => {
+  try {
+    const { recurring } = data;
+    if (!recurring || recurring.type === 'none') {
+      throw new Error('Invalid recurring configuration');
+    }
+
+    // Generate unique group ID for this recurring series
+    const recurringGroupId = `recurring_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+    const appointments: any[] = [];
+    const duration = data.endTime.getTime() - data.startTime.getTime();
+
+    for (let i = 0; i < recurring.count; i++) {
+      let newStartTime: Date;
+
+      if (recurring.type === 'daily') {
+        newStartTime = new Date(data.startTime.getTime() + (i * 24 * 60 * 60 * 1000));
+      } else if (recurring.type === 'weekly') {
+        newStartTime = new Date(data.startTime.getTime() + (i * 7 * 24 * 60 * 60 * 1000));
+      } else if (recurring.type === 'monthly') {
+        newStartTime = new Date(data.startTime);
+        newStartTime.setMonth(newStartTime.getMonth() + i);
+      } else {
+        throw new Error('Invalid recurring type');
+      }
+
+      const newEndTime = new Date(newStartTime.getTime() + duration);
+
+      appointments.push({
+        userId,
+        patientName: data.patientName,
+        description: data.description,
+        startTime: Timestamp.fromDate(newStartTime),
+        endTime: Timestamp.fromDate(newEndTime),
+        createdAt: Timestamp.now(),
+        recurringGroupId, // Add group ID to link recurring appointments
+        appointmentType: data.appointmentType,
+        serviceType: data.serviceType,
+        patients: data.patients,
+      });
+    }
+
+    // Create all appointments
+    const promises = appointments.map(apt =>
+      addDoc(collection(db, APPOINTMENTS_COLLECTION), apt)
+    );
+
+    const results = await Promise.all(promises);
+    return results[0].id; // Return first appointment ID
+  } catch (error) {
+    console.error('Error creating recurring appointments:', error);
     throw error;
   }
 };
@@ -111,6 +182,9 @@ export const updateAppointment = async (
       description: data.description,
       startTime: Timestamp.fromDate(data.startTime),
       endTime: Timestamp.fromDate(data.endTime),
+      appointmentType: data.appointmentType,
+      serviceType: data.serviceType,
+      patients: data.patients,
     });
   } catch (error) {
     console.error('Error updating appointment:', error);
@@ -128,6 +202,54 @@ export const deleteAppointment = async (
     await deleteDoc(doc(db, APPOINTMENTS_COLLECTION, appointmentId));
   } catch (error) {
     console.error('Error deleting appointment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete all appointments in a recurring group
+ */
+export const deleteRecurringGroup = async (
+  recurringGroupId: string
+): Promise<void> => {
+  try {
+    const q = query(
+      collection(db, APPOINTMENTS_COLLECTION),
+      where('recurringGroupId', '==', recurringGroupId)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const deletePromises = querySnapshot.docs.map((doc) =>
+      deleteDoc(doc.ref)
+    );
+
+    await Promise.all(deletePromises);
+  } catch (error) {
+    console.error('Error deleting recurring group:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get appointment by ID
+ */
+export const getAppointmentById = async (
+  appointmentId: string
+): Promise<Appointment | null> => {
+  try {
+    const appointmentDoc = await getDocs(
+      query(collection(db, APPOINTMENTS_COLLECTION), where('__name__', '==', appointmentId))
+    );
+
+    if (appointmentDoc.empty) return null;
+
+    const data = appointmentDoc.docs[0].data();
+    return {
+      id: appointmentDoc.docs[0].id,
+      ...data,
+    } as Appointment;
+  } catch (error) {
+    console.error('Error getting appointment:', error);
     throw error;
   }
 };

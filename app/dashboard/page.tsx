@@ -68,20 +68,20 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Fizyocentro</h1>
-              <p className="text-sm text-gray-600">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Fizyocentro</h1>
+              <p className="text-xs sm:text-sm text-gray-600">
                 Hoş geldiniz, {user.name} ({user.role === 'admin' ? 'Admin' : 'Çalışan'})
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
               {/* Employee Selector for Admin */}
               {user.role === 'admin' && (
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">
                     Çalışan Seç:
                   </label>
                   <Select
@@ -92,7 +92,7 @@ export default function DashboardPage() {
                       }
                     }}
                   >
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-full sm:w-[200px]">
                       <SelectValue>
                         {selectedUserId
                           ? employees.find(e => e.id === selectedUserId)?.name || user.name
@@ -111,7 +111,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <Button variant="outline" onClick={handleSignOut}>
+              <Button variant="outline" onClick={handleSignOut} className="w-full sm:w-auto">
                 Çıkış Yap
               </Button>
             </div>
@@ -120,13 +120,13 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
               Randevu Takvimi
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-xs sm:text-sm text-gray-600">
               {user.role === 'admin'
                 ? selectedUserId
                   ? `${employees.find((e) => e.id === selectedUserId)?.name || ''} için randevular`
@@ -138,9 +138,9 @@ export default function DashboardPage() {
           <Calendar selectedUserId={selectedUserId} />
 
           {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2">Nasıl Kullanılır?</h3>
-            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+            <h3 className="font-medium text-blue-900 mb-2 text-sm sm:text-base">Nasıl Kullanılır?</h3>
+            <ul className="text-xs sm:text-sm text-blue-800 space-y-1 list-disc list-inside">
               <li>Yeni randevu oluşturmak için takvimde boş bir zaman dilimine tıklayın</li>
               <li>Mevcut randevuyu düzenlemek veya silmek için randevuya tıklayın</li>
               <li>Hafta ve gün görünümleri arasında geçiş yapabilirsiniz</li>
