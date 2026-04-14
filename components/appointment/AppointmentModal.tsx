@@ -9,6 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +54,8 @@ export function AppointmentModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [errorKey, setErrorKey] = useState(0);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
 
   const [formData, setFormData] = useState<AppointmentFormData>({
     patientName: '',
@@ -125,46 +137,31 @@ export function AppointmentModal({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
+    if (!onDelete) return;
+    setDeleteAllRecurring(false); // Reset checkbox
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
     if (!onDelete) return;
 
-    // Check if this is a recurring appointment
-    if (appointment?.recurringGroupId && onDeleteRecurringGroup) {
-      const deleteAll = confirm(
-        'Bu tekrarlı randevu serisinin bir parçasıdır.\n\n' +
-        'Tüm serisi silmek ister misiniz?\n\n' +
-        'EVET = Tüm seriyi sil\n' +
-        'HAYIR = Sadece bu randevuyu sil'
-      );
+    try {
+      setLoading(true);
 
-      try {
-        setLoading(true);
-        if (deleteAll) {
-          // Delete entire recurring group
-          await onDeleteRecurringGroup(appointment.recurringGroupId);
-        } else {
-          // Delete only this appointment
-          await onDelete();
-        }
-        handleClose();
-      } catch (error) {
-        console.error('Delete error:', error);
-      } finally {
-        setLoading(false);
+      // Check if should delete all recurring
+      if (deleteAllRecurring && appointment?.recurringGroupId && onDeleteRecurringGroup) {
+        await onDeleteRecurringGroup(appointment.recurringGroupId);
+      } else {
+        await onDelete();
       }
-    } else {
-      // Normal single appointment delete
-      if (confirm('Bu randevuyu silmek istediğinizden emin misiniz?')) {
-        try {
-          setLoading(true);
-          await onDelete();
-          handleClose();
-        } catch (error) {
-          console.error('Delete error:', error);
-        } finally {
-          setLoading(false);
-        }
-      }
+
+      setShowDeleteDialog(false);
+      handleClose();
+    } catch (error) {
+      console.error('Delete error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -177,6 +174,11 @@ export function AppointmentModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        {/* Overlay when delete dialog is open */}
+        {showDeleteDialog && (
+          <div className="absolute inset-0 bg-gray-900/50 z-[55] rounded-xl" />
+        )}
+
         <DialogHeader>
           <DialogTitle className="text-base sm:text-lg">
             {appointment ? 'Randevuyu Düzenle' : 'Yeni Randevu Oluştur'}
@@ -412,6 +414,54 @@ export function AppointmentModal({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog}>
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Randevuyu Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu işlem geri alınamaz. Randevuyu silmek istediğinizden emin misiniz?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {/* Recurring checkbox - only show if this is a recurring appointment */}
+          {appointment?.recurringGroupId && onDeleteRecurringGroup && (
+            <div className="flex items-center space-x-2 py-4">
+              <Checkbox
+                id="deleteAllRecurring"
+                checked={deleteAllRecurring}
+                onCheckedChange={(checked) => setDeleteAllRecurring(checked === true)}
+              />
+              <Label
+                htmlFor="deleteAllRecurring"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Bağlı tüm tekrarlı randevuları da sil
+              </Label>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={loading}
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeleteAllRecurring(false);
+              }}
+            >
+              İptal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={loading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {loading ? 'Siliniyor...' : 'Sil'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
