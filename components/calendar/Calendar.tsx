@@ -176,7 +176,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
 
   return (
     <>
-      <div className="calendar-container bg-white rounded-lg shadow p-4">
+      <div className="calendar-container bg-white rounded-lg shadow p-2 sm:p-4">
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}

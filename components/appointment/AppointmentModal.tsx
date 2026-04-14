@@ -130,18 +130,18 @@ export function AppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">
             {appointment ? 'Randevuyu Düzenle' : 'Yeni Randevu Oluştur'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Hasta bilgilerini ve randevu detaylarını giriniz.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-3 sm:gap-4 py-3 sm:py-4">
             {/* Patient Name */}
             <div className="grid gap-2">
               <Label htmlFor="patientName">Hasta Adı</Label>
