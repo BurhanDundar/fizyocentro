@@ -52,18 +52,25 @@ export function Calendar({ selectedUserId }: CalendarProps) {
   }, [user, selectedUserId]);
 
   // Convert appointments to FullCalendar events
-  const events: EventInput[] = appointments.map((appointment) => ({
-    id: appointment.id,
-    title: appointment.patientName,
-    start: appointment.startTime.toDate(),
-    end: appointment.endTime.toDate(),
-    extendedProps: {
-      description: appointment.description,
-      userId: appointment.userId,
-    },
-    backgroundColor: getColorForUser(appointment.userId),
-    borderColor: getColorForUser(appointment.userId),
-  }));
+  const events: EventInput[] = appointments.map((appointment) => {
+    // Use recurringGroupId for color if available, otherwise use appointment id
+    const colorKey = appointment.recurringGroupId || appointment.id;
+    const color = getColorForAppointment(colorKey);
+
+    return {
+      id: appointment.id,
+      title: appointment.patientName,
+      start: appointment.startTime.toDate(),
+      end: appointment.endTime.toDate(),
+      extendedProps: {
+        description: appointment.description,
+        userId: appointment.userId,
+        recurringGroupId: appointment.recurringGroupId,
+      },
+      backgroundColor: color,
+      borderColor: color,
+    };
+  });
 
   // Handle date/time slot click (create new appointment)
   const handleDateClick = (arg: DateClickArg) => {
@@ -288,22 +295,65 @@ export function Calendar({ selectedUserId }: CalendarProps) {
   );
 }
 
-// Helper function to generate consistent colors for users
-function getColorForUser(userId: string): string {
-  const colors = [
-    '#3b82f6', // blue
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#8b5cf6', // violet
-    '#ec4899', // pink
-    '#06b6d4', // cyan
+// Helper function to generate readable, diverse colors for appointments
+// Same recurringGroupId = same color, different appointments = different colors
+function getColorForAppointment(key: string): string {
+  const readableColors = [
+    // Blues
+    '#60a5fa', // medium blue
+    '#3b82f6', // strong blue
+    '#2563eb', // deep blue
+
+    // Greens
+    '#4ade80', // medium green
+    '#22c55e', // strong green
+    '#16a34a', // deep green
+
+    // Purples
+    '#a78bfa', // medium purple
+    '#8b5cf6', // strong purple
+    '#7c3aed', // deep purple
+
+    // Pinks/Roses
+    '#f472b6', // medium pink
+    '#ec4899', // strong pink
+    '#db2777', // deep rose
+
+    // Oranges
+    '#fb923c', // medium orange
+    '#f97316', // strong orange
+    '#ea580c', // deep orange
+
+    // Teals/Cyans
+    '#2dd4bf', // medium teal
+    '#14b8a6', // strong teal
+    '#0d9488', // deep teal
+
+    // Indigos
+    '#818cf8', // medium indigo
+    '#6366f1', // strong indigo
+    '#4f46e5', // deep indigo
+
+    // Reds
+    '#f87171', // medium red
+    '#ef4444', // strong red
+    '#dc2626', // deep red
+
+    // Emeralds
+    '#34d399', // medium emerald
+    '#10b981', // strong emerald
+    '#059669', // deep emerald
+
+    // Ambers (darker, readable)
+    '#fbbf24', // medium amber
+    '#f59e0b', // strong amber
+    '#d97706', // deep amber
   ];
 
   let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  return colors[Math.abs(hash) % colors.length];
+  return readableColors[Math.abs(hash) % readableColors.length];
 }
