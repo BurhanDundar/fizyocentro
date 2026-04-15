@@ -132,9 +132,12 @@ export function Calendar({ selectedUserId }: CalendarProps) {
       // Update appointment with new times
       await updateAppointment(appointment.id, {
         patientName: appointment.patientName,
-        description: appointment.description,
+        description: appointment.description || '',
         startTime: newStartTime,
         endTime: calculatedEndTime,
+        appointmentType: appointment.appointmentType || 'Rutin Görüşme',
+        serviceType: appointment.serviceType || 'Fizik Tedavi',
+        patients: appointment.patients || [],
       });
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -162,9 +165,12 @@ export function Calendar({ selectedUserId }: CalendarProps) {
       // Update appointment with new times
       await updateAppointment(appointment.id, {
         patientName: appointment.patientName,
-        description: appointment.description,
+        description: appointment.description || '',
         startTime: newStartTime,
         endTime: newEndTime,
+        appointmentType: appointment.appointmentType || 'Rutin Görüşme',
+        serviceType: appointment.serviceType || 'Fizik Tedavi',
+        patients: appointment.patients || [],
       });
     } catch (error) {
       console.error('Error resizing appointment:', error);
