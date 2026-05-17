@@ -16,6 +16,31 @@ import { db } from '@/lib/firebase/config';
 import { Appointment, AppointmentFormData } from '@/types';
 
 const APPOINTMENTS_COLLECTION = 'appointments';
+const REMINDER_OFFSET_MS = 60 * 60 * 1000;
+
+const hasValidPhone = (data: AppointmentFormData): boolean =>
+  data.patients.some((patient) => Boolean(patient.phone?.trim()));
+
+const getReminderFields = (data: AppointmentFormData) => {
+  if (!hasValidPhone(data)) {
+    return {
+      reminderAt: null,
+      reminderChannel: null,
+      reminderStatus: 'skipped' as const,
+      reminderSentAt: null,
+      reminderError: null,
+    };
+  }
+
+  const reminderAt = new Date(data.startTime.getTime() - REMINDER_OFFSET_MS);
+  return {
+    reminderAt: Timestamp.fromDate(reminderAt),
+    reminderChannel: 'whatsapp' as const,
+    reminderStatus: 'scheduled' as const,
+    reminderSentAt: null,
+    reminderError: null,
+  };
+};
 
 /**
  * Get all appointments for a specific user
@@ -92,6 +117,7 @@ export const createAppointment = async (
       appointmentType: data.appointmentType,
       serviceType: data.serviceType,
       patients: data.patients,
+      ...getReminderFields(data),
     };
 
     const docRef = await addDoc(
@@ -151,6 +177,11 @@ const createRecurringAppointments = async (
         appointmentType: data.appointmentType,
         serviceType: data.serviceType,
         patients: data.patients,
+        ...getReminderFields({
+          ...data,
+          startTime: newStartTime,
+          endTime: newEndTime,
+        }),
       });
     }
 
@@ -185,6 +216,7 @@ export const updateAppointment = async (
       appointmentType: data.appointmentType,
       serviceType: data.serviceType,
       patients: data.patients,
+      ...getReminderFields(data),
     });
   } catch (error) {
     console.error('Error updating appointment:', error);

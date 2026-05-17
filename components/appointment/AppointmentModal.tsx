@@ -27,7 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Appointment, AppointmentFormData } from '@/types';
 import { appointmentSchema } from '@/lib/validations/appointment';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 interface AppointmentModalProps {
   open: boolean;
@@ -50,6 +50,9 @@ export function AppointmentModal({
   initialStartTime,
   initialEndTime,
 }: AppointmentModalProps) {
+  const toDateTimeLocalValue = (value: Date): string =>
+    isValid(value) ? format(value, "yyyy-MM-dd'T'HH:mm") : '';
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [errorKey, setErrorKey] = useState(0);
@@ -327,7 +330,7 @@ export function AppointmentModal({
                 key={`startTime-${errorKey}`}
                 id="startTime"
                 type="datetime-local"
-                value={format(formData.startTime, "yyyy-MM-dd'T'HH:mm")}
+                value={toDateTimeLocalValue(formData.startTime)}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -348,7 +351,7 @@ export function AppointmentModal({
                 key={`endTime-${errorKey}`}
                 id="endTime"
                 type="datetime-local"
-                value={format(formData.endTime, "yyyy-MM-dd'T'HH:mm")}
+                value={toDateTimeLocalValue(formData.endTime)}
                 onChange={(e) =>
                   setFormData({
                     ...formData,

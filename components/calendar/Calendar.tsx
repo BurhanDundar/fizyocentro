@@ -76,6 +76,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
   const handleDateClick = (arg: DateClickArg) => {
     // Only allow creating appointments for own calendar
     if (!user || selectedUserId !== user.id) {
+      alert('Başkasının takvimine randevu ekleyemezsiniz!');
       return;
     }
 
@@ -91,6 +92,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
   const handleEventClick = (arg: EventClickArg) => {
     // Only allow editing appointments for own calendar
     if (!user || selectedUserId !== user.id) {
+      alert('Başkasının randevularını düzenleyemezsiniz!');
       return;
     }
 
@@ -107,6 +109,7 @@ export function Calendar({ selectedUserId }: CalendarProps) {
     // Only allow moving appointments for own calendar
     if (!user || selectedUserId !== user.id) {
       arg.revert();
+      alert('Başkasının randevularında değişiklik yapamazsınız!');
       return;
     }
 
@@ -147,6 +150,13 @@ export function Calendar({ selectedUserId }: CalendarProps) {
 
   // Handle event resize (büyütme/küçültme)
   const handleEventResize = async (arg: EventResizeDoneArg) => {
+    // Only allow resizing appointments for own calendar
+    if (!user || selectedUserId !== user.id) {
+      arg.revert();
+      alert('Başkasının randevularında değişiklik yapamazsınız!');
+      return;
+    }
+
     const appointment = appointments.find((a) => a.id === arg.event.id);
     if (!appointment) {
       arg.revert();

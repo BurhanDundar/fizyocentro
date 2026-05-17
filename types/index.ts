@@ -34,6 +34,14 @@ export interface Appointment {
   appointmentType: AppointmentType;
   serviceType: ServiceType;
   patients: PatientInfo[];
+  reminderAt?: Timestamp;
+  reminderChannel?: 'whatsapp';
+  reminderStatus?: 'scheduled' | 'sent' | 'failed' | 'skipped';
+  reminderSentAt?: Timestamp;
+  reminderError?: string | null;
+  reminderProvider?: 'twilio';
+  reminderProviderMessageSid?: string;
+  reminderProviderStatus?: string;
 }
 
 // Recurring appointment options
