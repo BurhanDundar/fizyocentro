@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/firebase/admin';
-import { sendWhatsappMessage } from '@/lib/whatsapp/twilio';
+import { sendWhatsappMessage } from '@/lib/whatsapp/meta';
 
 const APPOINTMENTS_COLLECTION = 'appointments';
 
@@ -19,9 +19,9 @@ const getFirstPhone = (patients: AppointmentReminderDoc['patients']): string | n
   return patientWithPhone?.phone?.trim() || null;
 };
 
-const buildReminderMessage = (patientName: string, startTime: Timestamp) => {
+const formatAppointmentDate = (startTime: Timestamp) => {
   const date = startTime.toDate();
-  const trDate = date.toLocaleString('tr-TR', {
+  return date.toLocaleString('tr-TR', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -30,8 +30,6 @@ const buildReminderMessage = (patientName: string, startTime: Timestamp) => {
     hour12: false,
     timeZone: 'Europe/Istanbul',
   });
-
-  return `Merhaba ${patientName}, Fizyocentro randevunuzu hatırlatmak isteriz. Randevu saatiniz: ${trDate}.`;
 };
 
 export async function GET(request: Request) {
@@ -83,20 +81,22 @@ export async function GET(request: Request) {
     }
 
     const patientName = data.patientName || 'Danışanımız';
+    const appointmentDateText = formatAppointmentDate(data.startTime);
 
     try {
-      const twilioResult = await sendWhatsappMessage({
+      const providerResult = await sendWhatsappMessage({
         to: phone,
-        body: buildReminderMessage(patientName, data.startTime),
+        textBody: `Merhaba ${patientName}, Fizyocentro randevunuzu hatırlatmak isteriz. Randevu saatiniz: ${appointmentDateText}.`,
+        templateParams: [patientName, doc.id, appointmentDateText],
       });
 
       await doc.ref.update({
         reminderStatus: 'sent',
         reminderSentAt: FieldValue.serverTimestamp(),
         reminderError: null,
-        reminderProvider: 'twilio',
-        reminderProviderMessageSid: twilioResult.sid,
-        reminderProviderStatus: twilioResult.status,
+        reminderProvider: 'meta',
+        reminderProviderMessageId: providerResult.messageId,
+        reminderProviderStatus: providerResult.status,
       });
       sent += 1;
     } catch (error) {
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
       await doc.ref.update({
         reminderStatus: 'failed',
         reminderError: message.slice(0, 500),
-        reminderProvider: 'twilio',
+        reminderProvider: 'meta',
       });
       failed += 1;
     }

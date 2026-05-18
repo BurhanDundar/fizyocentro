@@ -39,8 +39,8 @@ export interface Appointment {
   reminderStatus?: 'scheduled' | 'sent' | 'failed' | 'skipped';
   reminderSentAt?: Timestamp;
   reminderError?: string | null;
-  reminderProvider?: 'twilio';
-  reminderProviderMessageSid?: string;
+  reminderProvider?: 'meta' | 'twilio';
+  reminderProviderMessageId?: string;
   reminderProviderStatus?: string;
 }
 
